@@ -4,6 +4,7 @@ from typing import Any
 import sqlite3
 from datetime import datetime
 
+
 class SQLiteRepository(AbstractRepository[T]):
     def __init__(self, db_file: str, cls: type) -> None:
         self.db_file = db_file
@@ -11,6 +12,8 @@ class SQLiteRepository(AbstractRepository[T]):
         self.cls = cls
         self.fields = get_annotations(cls, eval_str=True)
         self.fields.pop('pk')
+        self.format = "%Y-%m-%d %H:%M:%S"
+        self.date_fields = set()
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             res = cur.execute('SELECT name FROM sqlite_master')
@@ -19,7 +22,6 @@ class SQLiteRepository(AbstractRepository[T]):
                 col_names = ', '.join(self.fields.keys())
                 q = f'CREATE TABLE {self.table_name} (' \
                     f'"pk" INTEGER PRIMARY KEY AUTOINCREMENT, {col_names})'
-                print(col_names)
                 cur.execute(q)
         con.close()
 
@@ -33,7 +35,15 @@ class SQLiteRepository(AbstractRepository[T]):
 
         names = ', '.join(self.fields.keys())
         p = ', '.join("?" * len(self.fields))
-        values = [getattr(obj, x) for x in self.fields] #TODO: сделать отдельную функцию с обработкой datetime
+        values = []
+
+        for x in self.fields:
+            if isinstance(getattr(obj, x), datetime):
+                values.append(getattr(obj, x).strftime(self.format))
+                self.date_fields.add(x)
+            else:
+                values.append(getattr(obj, x))
+
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
@@ -45,11 +55,17 @@ class SQLiteRepository(AbstractRepository[T]):
 
 
     def __generate_object(self, db_row: tuple) -> T:
+        """
+        generates object from database entry
+        """
         obj = self.cls(self.fields)
         for field, value in zip(self.fields, db_row[1:]):
+            if field in self.date_fields:
+                value = datetime.strptime(value, self.format)
             setattr(obj, field, value)
         obj.pk = db_row[0]
         return obj
+
 
     def get(self, pk: int) -> T | None:
         """ Получить объект по id """
@@ -81,12 +97,17 @@ class SQLiteRepository(AbstractRepository[T]):
                     q += key + ' = ?'
                     if i < len(where) - 1:
                         q += ' AND '
-                rows = cur.execute(q, list(where.values())).fetchall()
+                values = list(where.values())
+                values = list(map(lambda x: x.strftime(self.format) if isinstance(x, datetime)
+                                  else x, values))
+                print(values)
+                rows = cur.execute(q, values).fetchall()
 
             if rows is None:
                 return []
 
             res = [self.__generate_object(row) for row in rows]
+            print(res)
         con.close()
 
         return res

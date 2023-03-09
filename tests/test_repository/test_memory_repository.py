@@ -1,6 +1,7 @@
 from bookkeeper.repository.memory_repository import MemoryRepository
 from dataclasses import dataclass
 import pytest
+from datetime import datetime
 
 
 @pytest.fixture
@@ -11,6 +12,7 @@ def custom_class():
         test: str = '0'
         pk: int = 0
         test_field: str = 'abc'
+        date: datetime = datetime(2022, 5, 10)
     return Custom
 
 
@@ -69,7 +71,10 @@ def test_get_all_with_condition(repo, custom_class):
         o = custom_class()
         o.name = str(i)
         o.test = 'test'
+        if i == 4:
+            o.date = datetime(2021, 1, 2)
         repo.add(o)
         objects.append(o)
     assert repo.get_all({'name': '0'}) == [objects[0]]
     assert repo.get_all({'test': 'test'}) == objects
+    assert repo.get_all({'date': datetime(2022, 5, 10)}) == objects[:-1]
