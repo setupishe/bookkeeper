@@ -1,6 +1,8 @@
 from inspect import get_annotations
-from abstract_repository import AbstractRepository, T
+from bookkeeper.repository.abstract_repository import AbstractRepository, T
+from typing import Any
 import sqlite3
+from datetime import datetime
 
 class SQLiteRepository(AbstractRepository[T]):
     def __init__(self, db_file: str, cls: type) -> None:
@@ -17,13 +19,21 @@ class SQLiteRepository(AbstractRepository[T]):
                 col_names = ', '.join(self.fields.keys())
                 q = f'CREATE TABLE {self.table_name} (' \
                     f'"pk" INTEGER PRIMARY KEY AUTOINCREMENT, {col_names})'
+                print(col_names)
                 cur.execute(q)
         con.close()
 
     def add(self, obj: T) -> int:
+        """
+        Добавить объект в репозиторий, вернуть id объекта,
+        также записать id в атрибут pk.
+        """
+        if getattr(obj, 'pk', None) != 0:
+            raise ValueError(f'trying to add object {obj} with filled `pk` attribute')
+
         names = ', '.join(self.fields.keys())
         p = ', '.join("?" * len(self.fields))
-        values = [getattr(obj, x) for x in self.fields]
+        values = [getattr(obj, x) for x in self.fields] #TODO: сделать отдельную функцию с обработкой datetime
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
@@ -32,6 +42,7 @@ class SQLiteRepository(AbstractRepository[T]):
             obj.pk = cur.lastrowid
         con.close()
         return obj.pk
+
 
     def __generate_object(self, db_row: tuple) -> T:
         obj = self.cls(self.fields)
@@ -62,23 +73,51 @@ class SQLiteRepository(AbstractRepository[T]):
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             q = f'SELECT * FROM {self.table_name}'
-            if where is not None:
-                q_add = f'WHERE '
-                for i, key in where:
-                    q_add += key + '==' + where[key]
+            if where is None:
+                rows = cur.execute(q).fetchall()
+            else:
+                q += f' WHERE '
+                for i, key in enumerate(where):
+                    q += key + ' = ?'
                     if i < len(where) - 1:
-                        q_add += ' AND '
-                q += q_add
+                        q += ' AND '
+                rows = cur.execute(q, list(where.values())).fetchall()
 
-            rows = cur.execute(q).fetchall()
-
-            res = []
             if rows is None:
-                return res
+                return []
 
-            for row in rows:
-                res.append(self.__generate_object(row))
+            res = [self.__generate_object(row) for row in rows]
+        con.close()
 
-            return res
+        return res
+
+    def update(self, obj: T) -> None:
+        """ Обновить данные об объекте. Объект должен содержать поле pk. """
+        if obj.pk == 0:
+            raise ValueError('attempt to update object with unknown primary key')
+        values = [getattr(obj, x) for x in self.fields]
+        names = self.fields.keys()
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            q = f'UPDATE {self.table_name} SET '
+            for i, name in enumerate(names):
+                q += f'{name} = ?'
+                if i < len(names) - 1:
+                    q += ', '
+            q += f'WHERE pk = {obj.pk}'
+            cur.execute(q, values)
+        con.close()
+
+    def delete(self, pk: int) -> None:
+        """ Удалить запись """
+        with sqlite3.connect(self.db_file) as con:
+            cur = con.cursor()
+            q = f'SELECT * FROM {self.table_name} WHERE pk = {pk}'
+            res = cur.execute(q).fetchall()
+            if len(res) == 0:
+                raise KeyError('primary key not found')
+            q = f'DELETE FROM {self.table_name} WHERE pk = {pk}'
+            cur.execute(q)
+        con.close()
 
 

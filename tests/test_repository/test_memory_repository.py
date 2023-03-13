@@ -1,14 +1,18 @@
 from bookkeeper.repository.memory_repository import MemoryRepository
-
+from dataclasses import dataclass
 import pytest
 
 
 @pytest.fixture
 def custom_class():
-    class Custom():
-        pk = 0
-
+    @dataclass
+    class Custom:
+        name: str = '0'
+        test: str = '0'
+        pk: int = 0
+        test_field: str = 'abc'
     return Custom
+
 
 
 @pytest.fixture
