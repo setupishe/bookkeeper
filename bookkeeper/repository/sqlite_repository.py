@@ -100,14 +100,12 @@ class SQLiteRepository(AbstractRepository[T]):
                 values = list(where.values())
                 values = list(map(lambda x: x.strftime(self.format) if isinstance(x, datetime)
                                   else x, values))
-                print(values)
                 rows = cur.execute(q, values).fetchall()
 
             if rows is None:
                 return []
 
             res = [self.__generate_object(row) for row in rows]
-            print(res)
         con.close()
 
         return res
