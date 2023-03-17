@@ -1,5 +1,5 @@
 import sys
-from PySide6 import QtWidgets, QtGui
+from PySide6 import QtWidgets, QtGui, QtCore
 from typing import Any
 
 
@@ -35,9 +35,12 @@ class AutoComboBox(QtWidgets.QComboBox):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-
     categories_list = LabeledWidget("Категории", AutoComboBox(['11', '22', '2412424']))
-
+    item = QtGui.QStandardItem("test")
+    #item.setStyleSheet("font-weight: bold;")
+    categories_list.widget.insertItem(0, "Изменить...")
+    newFont = QtGui.QFont("FontFamily", italic=True)
+    categories_list.widget.setItemData(0, newFont, QtCore.Qt.FontRole)
     add_summ = LabeledWidget("Сумма", QtWidgets.QLineEdit("0"))
 
 
