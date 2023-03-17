@@ -22,6 +22,11 @@ def test_create_brief():
 
 
 def test_can_add_to_repo(repo):
-    b = Budget(100, 1)
+    b = Budget(1, 100)
     pk = repo.add(b)
     assert b.pk == pk
+
+
+def test_cant_add_negative_summ():
+    with pytest.raises(ValueError):
+        b = Budget(1, -100)
