@@ -5,6 +5,7 @@ from PySide6 import QtWidgets
 from bookkeeper.models.expense import Expense
 from bookkeeper.repository.sqlite_repository import SQLiteRepository
 from typing import Any
+from gui_demo import LabeledWidget
 
 
 
@@ -39,8 +40,7 @@ data = [list(x.__dict__.values()) for x in data]
 app = QtWidgets.QApplication(sys.argv)
 
 columns_names = "Сумма Категория Потрачено Добавлено Комментарий".split()
-expenses_table = AutoTable(columns_names, data, 10, 5)
-
+expenses_table = LabeledWidget("Последние расходы", AutoTable(columns_names, data, 10, 5), "vertical")
 
 expenses_table.show()
 
