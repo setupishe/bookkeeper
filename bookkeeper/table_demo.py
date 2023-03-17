@@ -4,13 +4,15 @@ import sys
 from PySide6 import QtWidgets
 from bookkeeper.models.expense import Expense
 from bookkeeper.repository.sqlite_repository import SQLiteRepository
+from typing import Any
 
 
-class ExpensesTable(QtWidgets.QTableWidget):
+
+class AutoTable(QtWidgets.QTableWidget):
     """
     Table for displaying recent expenses
     """
-    def __init__(self, columns_names: list[str], *args, **kwargs):
+    def __init__(self, columns_names: list[str], data: list[Any], *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setHorizontalHeaderLabels(columns_names)
@@ -22,21 +24,22 @@ class ExpensesTable(QtWidgets.QTableWidget):
 
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.verticalHeader().hide()
+        self._set_data(data)
 
-    def set_data(self, data: list[Expense]):
+    def _set_data(self, data: list[Any]):
         for i, expense in enumerate(data):
-            for j, x in enumerate(list(expense.__dict__.values())):
+            for j, x in enumerate(expense):
                 self.setItem(i, j, QtWidgets.QTableWidgetItem(str(x).capitalize()))
 
 
 exp_repo = SQLiteRepository[Expense]('demo_expenses.db', Expense)
 data = exp_repo.get_all()
+data = [list(x.__dict__.values()) for x in data]
 
 app = QtWidgets.QApplication(sys.argv)
 
 columns_names = "Сумма Категория Потрачено Добавлено Комментарий".split()
-expenses_table = ExpensesTable(columns_names, 10, 5)
-expenses_table.set_data(data)
+expenses_table = AutoTable(columns_names, data, 10, 5)
 
 
 expenses_table.show()
