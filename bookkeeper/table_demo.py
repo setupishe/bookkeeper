@@ -41,8 +41,11 @@ app = QtWidgets.QApplication(sys.argv)
 
 columns_names = "Сумма Категория Потрачено Добавлено Комментарий".split()
 expenses_table = LabeledWidget("Последние расходы", AutoTable(columns_names, data, 10, 5), "vertical")
+budget_columns = ["", "Сумма", "Бюджет", "Категория"]
+budget_data = [["День", 200, 1000, 0], ["Неделя", 300, 1300, 0], ["Месяц", 400, 5000, 3]]
+budget_table = LabeledWidget("Бюджет", AutoTable(budget_columns, budget_data, 3, 4), "vertical")
 
-expenses_table.show()
+budget_table.show()
 
 sys.exit(app.exec())
 
